@@ -1,0 +1,11 @@
+# curl do upload
+
+curl -X POST http://localhost:3333/upload/prepared-video.mp4 \
+  -T /Users/tonrodriguesbr/www/courses/nodejs/streams-nodejs/prepared-video.mp4
+
+# list videos
+
+curl -X GET http://localhost:3333/videos
+
+stream
+Acesse no navegador: http://localhost:3333/video/prepared-video.mp4
