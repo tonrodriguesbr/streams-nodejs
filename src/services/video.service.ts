@@ -4,30 +4,47 @@ import path from "node:path";
 import { createWriteStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
 import type { Readable } from "node:stream";
+import { readdir } from "node:fs/promises";
 
-export async function videoService(
-  filename: string,
-  input: Readable,
-): Promise<void> {
-  ensureDirectoryExists(uploadDirectory);
+export class VideoService {
+  async uploadVideo(filename: string, input: Readable): Promise<void> {
+    ensureDirectoryExists(uploadDirectory);
 
-  if (!filename) {
-    throw new Error("Filename is required");
+    if (!filename) {
+      throw new Error("Filename is required");
+    }
+
+    const safeFilename = path.basename(filename);
+
+    if (safeFilename !== filename) {
+      throw new Error("Invalid filename");
+    }
+
+    const filePath = path.join(uploadDirectory, safeFilename);
+    const writeStream = createWriteStream(filePath);
+
+    try {
+      await pipeline(input, writeStream);
+    } catch (error) {
+      console.error("Pipeline failed", error);
+      throw new Error("File upload failed", { cause: error });
+    }
   }
 
-  const safeFilename = path.basename(filename);
+  async listVideos(): Promise<{ filename: string; url: string }[]> {
+    ensureDirectoryExists(uploadDirectory);
 
-  if (safeFilename !== filename) {
-    throw new Error("Invalid filename");
-  }
+    const files = await readdir(uploadDirectory);
+    const videoFiles = files.filter((file) => {
+      const ext = path.extname(file).toLowerCase();
+      return [".mp4", ".avi", ".mkv", ".mov"].includes(ext);
+    });
 
-  const filePath = path.join(uploadDirectory, safeFilename);
-  const writeStream = createWriteStream(filePath);
+    const videos = videoFiles.map((file) => ({
+      filename: file,
+      url: `/uploads/${file}`,
+    }));
 
-  try {
-    await pipeline(input, writeStream);
-  } catch (error) {
-    console.error("Pipeline failed", error);
-    throw new Error("File upload failed", { cause: error });
+    return videos;
   }
 }
